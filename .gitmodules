@@ -1,0 +1,3 @@
+[submodule "tekton-pipelines"]
+	path = tekton-pipelines
+	url = git@github.com:ujjinimech/tekton-cicd.git
