@@ -1,0 +1,57 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-debug
+spec:
+  workspaces:
+  - name: output
+    optional: true
+  steps:
+  - image: alpine:latest
+    workingDir: "/workspace/output/"
+    script: |
+      ls -lrt      
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: sqr-yard-be
+spec:
+  workspaces:
+  - name: shared-data
+    description: |
+      This workspace will receive the cloned git repo and be passed
+      to the next Task for the repo's README.md file to be read.
+  tasks:
+  - name: fetch-repo
+    taskRef:
+      name: git-clone
+    params:
+    - name: url
+      value: "http://gitlab.squareyards.com:8180/dotcom/zelarsoft-code-api.git"
+    - name: revision
+      value: "master"     
+    workspaces:
+    - name: output
+      workspace: shared-data     
+  - name: debug-folder
+    runAfter: ["fetch-repo"]
+    taskRef:
+      name: run-debug 
+    workspaces:
+    - name: output
+      workspace: shared-data         
+  - name: build-container-image
+    runAfter: ["debug-folder"]
+    taskRef:
+      name: build-kaniko-git
+    params:
+    - name: app_repo
+      value: dir:///workspace/output/
+    - name: container_image
+      value: asia-south1-docker.pkg.dev/zelarsoft-350108/sqyards/api-image 
+    - name: container_tag
+      value: "v20"
+    workspaces:
+    - name: output
+      workspace: shared-data
